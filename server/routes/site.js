@@ -3,12 +3,9 @@ import express from 'express'
 import user from '../api/users'
 import forum from '../api/forums'
 import stream from '../api/stream'
-import Cache from '../api/memcache'
 
 import runtime from '../runtime'
 import {wrapper, sendResponse} from './routeutils'
-
-let topicReadCache = new Cache(1200000)
 
 const router = express.Router()
 
@@ -298,16 +295,7 @@ router.get('/forum/viewtopic/:id-*?', wrapper(async (req, res) => {
     }
   }
 
-  let addRead = true
-  let readConsider = req.session.user ? req.session.user.id : req.realIP
-
-  if (topicReadCache.get('read#' + readConsider)) {
-    addRead = false
-  } else {
-    topicReadCache.store('read#' + readConsider, true)
-  }
-
-  let topic = await forum.getPostsInTopic(req.params.id, page, null, req.session.user, addRead)
+  let topic = await forum.getPostsInTopic(req.params.id, page, null, req.session.user, req.realIP)
   if (!topic.page) {
     req.flash('message', {error: true, text: topic.error})
     return res.redirect('/forum')

@@ -70,16 +70,24 @@
 			<div class="post-content">
 				<div class="heading">
 					<span class="timestamp" title="<%= timeSince(new Date(post.created_at)) %> ago"><%= new Date(post.created_at) %></span>
+					<% if (post.updated_at) { %>
+					&nbsp;&middot;&nbsp;
+					<span class="timestamp edited" title="<%= new Date(post.updated_at) %>">Edited <%= timeSince(new Date(post.updated_at)) %> ago</span>
+					<% } %>
 					<% if (page.category.permission_list.indexOf('post.seeip') != -1) { %>
 					<span class="ip_address"><%= post.ip_address %></span>
 					<% } %>
 				</div>
 				<div class="recontent" id="post-content-<%= post.id %>">
+				<% if (post.blocked) { %>
+				<p class="blocked">A moderator has removed this post.</p>
+				<% } else { %>
 				<%- post.content %>
+				<% } %>
 				</div>
 			</div>
 			<div class="buttons">
-				<% if (canPostInHere) { %>
+				<% if (canPostInHere && !post.blocked) { %>
 				<a href="#" onclick="replyTag({username: '<%= post.user.username %>'}); return false;" class="button">Reply</a>
 				<% if (post.user.id === user.id || page.category.permission_list.indexOf('topic.modify.other') != -1) { %>
 				<a href="#" onclick="editPost(<%= post.id %>);" class="button editbtn">Edit</a>

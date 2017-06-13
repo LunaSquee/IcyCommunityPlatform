@@ -23,6 +23,13 @@ body {
 .section.metric {
     text-align: center;
 }
+.section.read {
+    min-width: 20px;
+    vertical-align: bottom;
+}
+.read a {
+    color: #9c9c9c;
+}
 .metric .number {
     display: block;
     font-size: 120%;
@@ -103,6 +110,10 @@ body {
     font-size: 80%;
     color: #ccc;
 }
+.timestamp.edited {
+    color: #888;
+    font-weight: bold;
+}
 .post .ip_address {
     float: right;
 }
@@ -139,6 +150,9 @@ body {
 .post .title .index {
     float: right;
     color: #82c8ff;
+}
+.post .recontent {
+    padding: 5px;
 }
 .user_tag {
     padding: 10px;
@@ -232,7 +246,6 @@ input[type=text], input[type=email], input[type=password] {
     position: absolute;
     pointer-events: none;
 }
-
 .forum_nav .spage:after {
     border-color: rgba(136, 183, 213, 0);
     border-left-color: #ffffff;

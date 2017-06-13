@@ -41,6 +41,17 @@
 				let topic = page.topics[i]
 			%>
 			<div class="topic listlayout" id="topic-<%= topic.slug %>">
+				<% if (locals.user) { %>
+				<div class="section read">
+					<a href="/forum/viewtopic/<%= topic.id + '-' + topic.slug %>?latest">
+					<% if (topic.read) { %>
+					<i class="fa fa-check-square-o fa-2x" title="No new posts"></i>
+					<% } else { %>
+					<i class="fa fa-newspaper-o fa-2x" title="New posts"></i>
+					<% } %>
+					</a>
+				</div>
+				<% } %>
 				<div class="section title">
 					<a href="/forum/viewtopic/<%= topic.id + '-' + topic.slug %>"><%= topic.title %></a>
 					<% if (topic.latest_reply) {

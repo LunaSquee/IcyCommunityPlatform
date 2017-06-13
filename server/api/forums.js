@@ -2,6 +2,7 @@ import db from '../../utility/database'
 import slugify from '../../utility/slug'
 import render from '../../utility/contentfilter'
 
+import Cache from './memcache'
 import users from './users'
 import stream from './stream'
 
@@ -32,6 +33,8 @@ class Post extends Model {
     return 'posts'
   }
 }
+
+let topicReadCache = new Cache(1200000)
 
 function paginate (page, count, perPage) {
   let pageCount = Math.ceil(count / perPage)
@@ -79,7 +82,7 @@ const API = {
 
     return cats
   },
-  getPostsInTopic: async (topic, page, perPage, user, addRead) => {
+  getPostsInTopic: async (topic, page, perPage, user, ip) => {
     if (!topic.id) {
       let t = await Topic.query().where('id', topic)
       if (!t.length) {
@@ -90,12 +93,6 @@ const API = {
 
     if (topic.read_by === null) topic.read_by = ''
     let readByUsers = topic.read_by.split('|')
-
-    if (user) {
-      if (readByUsers.indexOf(user.id) === -1) {
-        readByUsers.push(user.id)
-      }
-    }
 
     // Get the amount of posts in order to do pagination
     let postCount = await Post.query().count('id as counts').where('topic_id', topic.id)
@@ -109,9 +106,24 @@ const API = {
     perPage = perPage || runtime.get('postsPerPage')
     let pageinfo = paginate(page, postCount, perPage)
 
-    if (addRead && page === pageinfo.pages) {
+    // Check if this user already visited this page
+    let addRead = true
+    if (topicReadCache.get('read#' + topic.id + ':' + user ? user.id : ip)) {
+      addRead = false
+    }
+
+    if (addRead && page === pageinfo.pageCount) {
+      // Add user into the read by list
+      if (user && readByUsers.indexOf(user.id) === -1) {
+        readByUsers.push(user.id)
+      }
+
+      // Add a cache entry so that we don't let unregistered users spam more views with refreshing
+      topicReadCache.store('read#' + topic.id + ':' + user ? user.id : ip, true)
+
+      // Update topic with new views and new readers
       topic.views++
-      await Topic.query().patchAndFetchById(topic.id, {views: topic.views, read_by: readByUsers.join('|')})
+      await Topic.query().patchAndFetchById(topic.id, {views: topic.views, read_by: readByUsers.length ? readByUsers.join('|') : ''})
     }
 
     // Query offset posts
@@ -122,11 +134,17 @@ const API = {
     let perms = await users.permssionsOnCategory(user, category)
     category.permission_list = perms
 
-    // Add user info to posts
+    // Add user info and render posts
     for (let i in posts) {
-      let user = await users.getPublicProfile(posts[i].user_id)
-      posts[i].user = user
-      posts[i].content = render(posts[i].content)
+      let guser = await users.getPublicProfile(posts[i].user_id)
+      posts[i].user = guser
+      posts[i].blocked = posts[i].blocked === 1
+
+      if (posts[i].blocked) {
+        posts[i].content = 'Content removed by a moderator'
+      } else {
+        posts[i].content = render(posts[i].content)
+      }
     }
 
     return {
@@ -171,16 +189,13 @@ const API = {
       let topic = topics[i]
 
       // Pull latest reply to topic
-      let latestReply = await Post.query().where('topic_id', topic.id).orderBy('id', 'desc').limit(1)
+      let latestReply = await API.getLatestPost(topic)
 
-      if (latestReply.length) {
-        latestReply = latestReply[0]
-
-        // Append user information
-        let user = await users.getPublicProfile(latestReply.user_id)
-        latestReply.user = user
+      if (latestReply) {
         topic['latest_reply'] = latestReply
       }
+
+      topic['read'] = topic.read_by && user ? topic.read_by.split('|').indexOf(user.id.toString()) !== -1 : false
 
       // Pull total reply count
       let replyCount = await Post.query().count('id as counts').where('topic_id', topic.id)
@@ -215,6 +230,24 @@ const API = {
     let page = Math.floor(indexOfPost / perPage) + 1
     if (page === 0) page = 1
     return page
+  },
+  getLatestPost: async (topic) => {
+    if (!topic.id) {
+      let t = await Topic.query().where('id', topic)
+      if (!t.length) {
+        return {success: false, error: 'No such topic!'}
+      }
+      topic = t[0]
+    }
+
+    let post = await Post.query().where('topic_id', topic.id).orderBy('created_at', 'desc').limit(1)
+    if (!post.length) return null
+    post = post[0]
+
+    let getuser = await users.getPublicProfile(post.user_id)
+    post.user = getuser
+
+    return post
   },
   getListForums: async (includeLatestPost, user) => {
     let forums = await Forum.query().orderBy('priority')

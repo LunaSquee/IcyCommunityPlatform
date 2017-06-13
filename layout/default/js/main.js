@@ -75,6 +75,7 @@ $(document).ready(function () {
 
           if (data.serialized) {
             $('#post-content-' + id).html(data.serialized)
+            $('#post-' + id + ' .edited').html('Edited now')
             window.location.hash = 'post-' + id
           } else {
             window.location = '?findPost=' + id
