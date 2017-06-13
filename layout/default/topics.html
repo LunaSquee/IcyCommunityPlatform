@@ -1,0 +1,100 @@
+<% include partials/head.html %>
+<body>
+	<% include partials/page_top.html %>
+	<div class="wrapper">
+		<% if (locals.announcements) { %>
+		<div class="announcements">
+			<% for (let i in announcements) {
+				let ann = announcements[i]
+			%>
+			<div class="announcement <% if (i == 0) { %>visible<% } %>" data-part="<% i %>"><%= ann.html %></div>
+			<% } %>
+		</div>
+		<% } %>
+		<div class="forums">
+		<nav class="forum_nav">
+			<a class="spage" style="z-index: 2;" href="/forum">Forum Index</a>
+			<a class="spage" style="z-index: 1;" href="/forum/<%= page.category.id + '-' + page.category.slug %>"><%= page.category.title %></a>
+			<a class="button" href="#" onclick="editor()">New Topic</a>
+		</nav>
+		<% if (locals.user && page.category.permission_list.indexOf('topic.create') != -1) { %>
+		<% } %>
+		<h1>Topics in <span class="sectiontitle"><%= page.category.title %></span></h1>
+		<span class="category_desc"><%= page.category.description %></span>
+		<p></p>
+		<% if (page.topics.length) { %>
+		<% if (page.page.pages > 1) { %>
+		<div class="page_buttons">
+			<% if (page.page.current != 1) { %>
+			<a href="?page=<%= page.page.current - 1 %>" class="pagebtn">Previous</a>
+			<% } %>
+			<% for (let i = 0; i < page.page.pages; i++) { let pnum = i + 1 %>
+			<a href="?page=<%= pnum %>" class="pagebtn<% if (pnum == page.page.current) { %> active<% } %>"><%= pnum %></a>
+			<% } %>
+			<% if (page.page.current != page.page.pages) { %>
+			<a href="?page=<%= page.page.current + 1 %>" class="pagebtn">Next</a>
+			<% } %>
+		</div>
+		<% } %>
+		<div class="topics">
+			<% for (let i in page.topics) {
+				let topic = page.topics[i]
+			%>
+			<div class="topic listlayout" id="topic-<%= topic.slug %>">
+				<div class="section title">
+					<a href="/forum/viewtopic/<%= topic.id + '-' + topic.slug %>"><%= topic.title %></a>
+					<% if (topic.latest_reply) {
+					let latr = topic.latest_reply
+					%>
+					<i class="lastupdate" title="<%= new Date(topic.created_at).toString() %>">Started <%= timeSince(new Date(topic.created_at)) %> ago</i>
+					<% } %>
+				</div>
+				<div class="section metric float">
+					<span class="number"><%= topic.views %></span>
+					<span class="metric-sub">Views</span>
+				</div>
+				<div class="section metric float">
+					<span class="number"><%= topic.replies %></span>
+					<span class="metric-sub">Replies</span>
+				</div>
+				<div class="section latest_post float">
+					<% if (topic.latest_reply) { 
+					let latr = topic.latest_reply
+					%>
+					<div class="minicard">
+					<img src="<%= latr.user.avatar_file %>" alt="avi" class="avatar">
+					<a href="/forum/viewtopic/<%= latr.topic_id %>--?findPost=<%= latr.id %>" class="topic_title"><%= latr.title %></a>
+					<a href="/user/<%= latr.user.profile_slug %>" class="topic_user"><%= latr.user.display_name %></a>
+					</div>
+					<% } else { %>
+					<i class="norecent">No posts here!</i>
+					<% } %>
+				</div>
+			</div>
+			<% } %>
+		</div>
+		<% } else {%>
+			<i class="norecent">No topics here!</i>
+		<% } %>
+		</div>
+	</div>
+	<% if (locals.user) { %>
+	<script type="text/html" id="composer">
+		<div class="composer">
+			<% if (locals.message && locals.message.text) { %>
+			<div class="message<% if (message.error) { %> error<% } %>"><%=message.text%></div>
+			<% } %>
+			<form action="" method="POST">
+				<input type="hidden" name="csrf" id="csrf" value="<%= csrf %>">
+				<input type="text" name="title" id="title" placeholder="Title of topic">
+				<textarea id="content" name="content"></textarea>
+				<input type="submit" value="Create topic">
+			</form>
+		</div>
+	</script>
+	<script type="text/javascript" src="/static/wysibb/jquery.wysibb.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="/static/wysibb/theme/default/wbbtheme.css">
+	<% } %>
+	<% include partials/footer.html %>
+</body>
+</html>

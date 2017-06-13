@@ -1,0 +1,19 @@
+<header>
+	<div class="top">
+		<% include banner.html %>
+		<div class="topcard">
+			<div class="user">
+			<% if (user) { %>
+			<div class="loggedin"><a class="user" href="/user/<%= user.identifier %>" data-display-box="user" data-display-id="<%= user.id %>"><%= user.display_name %></a></div>
+			<% } else { %>
+			<div class="loggedout">
+				<a href="/login">Log in</a><span class="divider">|</span>
+				<a href="/register">Register</a>
+			</div>
+			<% } %>
+		</div>
+	</div>
+	<nav class="navigator"></nav>
+	<!-- Dialog Include -->
+	<% include dialog.html %>
+</header>

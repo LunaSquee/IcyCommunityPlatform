@@ -1,0 +1,67 @@
+<% include partials/head.html %>
+<body>
+	<% include partials/page_top.html %>
+	<div class="wrapper">
+		<% if (locals.announcements) { %>
+		<div class="announcements">
+			<% for (let i in announcements) {
+				let ann = announcements[i]
+			%>
+			<div class="announcement <% if (i == 0) { %>visible<% } %>" data-part="<% i %>"><%= ann.html %></div>
+			<% } %>
+		</div>
+		<% } %>
+		<div class="forums">
+		<h1>Forums</h1>
+		<% if (locals.forums) { %>
+		<% for (let i in forums) {
+			let forum = forums[i]
+		%>
+		<div class="forum" data-forum-id="<%= forum.id %>" id="forum-<%= forum.slug %>">
+			<h2 class="forum_title"><%= forum.title %></h2>
+				<div class="categories">
+				<% for (let i in forum.categories) {
+					let category = forum.categories[i]
+				%>
+				<div class="category listlayout" id="category-<%= category.slug %>">
+					<div class="section title">
+						<a href="/forum/<%= category.id + '-' + category.slug %>"><%= category.title %></a>
+						<span class="description"><%= category.description %></span>
+						<% if (category.latest_reply) {
+						let latr = category.latest_reply
+						%>
+						&nbsp;&middot;&nbsp;
+						<i class="lastupdate" title="<%= new Date(latr.created_at).toString() %>">Last activity: <%= timeSince(new Date(latr.created_at)) %> ago</i>
+						<% } %>
+					</div>
+					<div class="section metric float">
+						<span class="number"><%= category.topics %></span>
+						<span class="metric-sub">Topics</span>
+					</div>
+					<div class="section metric float">
+						<span class="number"><%= category.replies %></span>
+						<span class="metric-sub">Replies</span>
+					</div>
+					<div class="section latest_post float">
+					<% if (category.latest_reply) { 
+					let latr = category.latest_reply
+					%>
+					<div class="minicard">
+					<img src="<%= latr.user.avatar_file %>" alt="avi" class="avatar">
+					<a href="/forum/viewtopic/<%= latr.topic_id %>--?findPost=<%= latr.id %>" class="topic_title"><%= latr.title %></a>
+					<a href="/user/<%= latr.user.profile_slug %>" class="topic_user"><%= latr.user.display_name %></a>
+					</div>
+					<% } else { %>
+					<i class="norecent">No posts here!</i>
+					<% } %>
+					</div>
+				<% } %>
+				</div>
+			</div>
+		</div>
+		<% } } %>
+		</div>
+	</div>
+	<% include partials/footer.html %>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<% include partials/head.html %>
+<body>
+	<% include partials/page_top.html %>
+	<div class="wrapper">
+		<% if (locals.announcements) { %>
+		<div class="announcements">
+			<% for (let i in announcements) {
+				let ann = announcements[i]
+			%>
+			<div class="announcement <% if (i == 0) { %>visible<% } %>" data-part="<% i %>"><%= ann.html %></div>
+			<% } %>
+		</div>
+		<% } %>
+		<div class="forums">
+		<nav class="forum_nav">
+			<a class="spage" style="z-index: 3;" href="/forum">Forum Index</a>
+			<a class="spage" style="z-index: 2;" href="/forum/<%= page.category.id + '-' + page.category.slug %>"><%= page.category.title %></a>
+			<a class="spage" style="z-index: 1;" href="/forum/viewtopic/<%= page.topic.id + '-' + page.topic.slug %>"><%= page.topic.title %></a>
+			<a href="#composer" class="button" style="float: right;">Reply to topic</a>
+		</nav>
+		<% let canPostInHere = locals.user != null
+
+		if (canPostInHere && page.category.permission_list.indexOf('topic.create') === -1) {
+			canPostInHere = false
+		}
+
+		if (canPostInHere && page.topic.locked === 1 && page.category.permission_list.indexOf('forum.post.locked') === -1) {
+			canPostInHere = false 
+		}
+		%>
+		<% if (canPostInHere) { %>
+		<% } %>
+		<h1><span class="sectiontitle"><%= page.topic.title %></span></h1>
+		<% if (page.posts[0]) {
+		let puser = page.posts[0].user %>
+		<span class="timestamp" title="<%= new Date(page.topic.created_at) %>">
+			Topic started <%= timeSince(new Date(page.topic.created_at)) %> ago by <a href="/user/<%= puser.profile_slug %>"><%= puser.display_name %></a>
+		</span>
+		<% } %>
+		<p></p>
+		<% if (page.page.pages > 1) { %>
+		<div class="page_buttons">
+			<% if (page.page.current != 1) { %>
+			<a href="?page=<%= page.page.current - 1 %>" class="pagebtn">Previous</a>
+			<% } %>
+			<% for (let i = 0; i < page.page.pages; i++) { let pnum = i + 1 %>
+			<a href="?page=<%= pnum %>" class="pagebtn<% if (pnum == page.page.current) { %> active<% } %>"><%= pnum %></a>
+			<% } %>
+			<% if (page.page.current != page.page.pages) { %>
+			<a href="?page=<%= page.page.current + 1 %>" class="pagebtn">Next</a>
+			<% } %>
+		</div>
+		<% } %>
+		<div class="thread">
+		<% for (let i in page.posts) {
+		let post = page.posts[i] %>
+		<div class="post" id="post-<%= post.id %>">
+			<div class="title">
+				<a href="#post-<%= post.id %>"><%= post.title %>
+					<span class="index">#<%= i * page.page.current + 1 %></span>
+				</a>
+			</div>
+			<div class="usercard">
+				<a href="/user/<%= post.user.profile_slug %>"><%= post.user.display_name %></a>
+				<div class="imagewrapper">
+					<img src="<%= post.user.avatar_file %>" alt="Avatar" class="avatar">
+				</div>
+				<div class="user_tag tag_<%= post.user.user_title.type %>"><span class="title_name" style="color: <%= post.user.user_title.color %>;"><%= post.user.user_title.name %></span></div>
+			</div>
+			<div class="post-content">
+				<div class="heading">
+					<span class="timestamp" title="<%= timeSince(new Date(post.created_at)) %> ago"><%= new Date(post.created_at) %></span>
+					<% if (page.category.permission_list.indexOf('post.seeip') != -1) { %>
+					<span class="ip_address"><%= post.ip_address %></span>
+					<% } %>
+				</div>
+				<div class="recontent" id="post-content-<%= post.id %>">
+				<%- post.content %>
+				</div>
+			</div>
+			<div class="buttons">
+				<% if (canPostInHere) { %>
+				<a href="#" onclick="replyTag({username: '<%= post.user.username %>'}); return false;" class="button">Reply</a>
+				<% if (post.user.id === user.id || page.category.permission_list.indexOf('topic.modify.other') != -1) { %>
+				<a href="#" onclick="editPost(<%= post.id %>);" class="button editbtn">Edit</a>
+				<% } } %>
+			</div>
+		</div>
+		<% } %>
+		</div>
+		<% if (canPostInHere) { %>
+		<div class="addreply" id="composer">
+			<h2>Reply to topic: <%= page.topic.title %></h2>
+			<% if (locals.message && locals.message.text) { %>
+			<div class="message<% if (message.error) { %> error<% } %>"><%=message.text%></div>
+			<% } %>
+			<form method="POST" action="">
+				<input type="hidden" name="csrf" id="csrf" value="<%= csrf %>">
+				<textarea id="content" name="content"><%= locals.contentdata %></textarea>
+				<input type="submit" value="Reply">
+			</form>
+			<script type="text/javascript" src="/static/wysibb/jquery.wysibb.min.js"></script>
+			<link rel="stylesheet" type="text/css" href="/static/wysibb/theme/default/wbbtheme.css">
+			<script type="text/javascript">
+				$(document).ready(() => {
+					$('#content').wysibb({minheight: 120})
+
+					window.replyTag = (data) => {
+						if (!data || !data.username) return
+						$('#content').insertAtCursor('@' + data.username + ': ')
+						window.location.hash = '#composer'
+					}
+				})
+			</script>
+			<script type="text/html" id="posteditor">
+				<span id="ongoingmsg"></span>
+				<div class="posteditor">
+					<form action="" method="POST" id="catchForm">
+						<input type="hidden" name="csrf" id="csrf" value="<%= csrf %>">
+						<textarea id="contentEdit" name="content"></textarea>
+						<input type="submit" value="Edit post">
+					</form>
+				</div>
+			</script>
+		</div>
+		<% } else if (page.topic.locked === 1) { %>
+		<i class="locked">This topic is locked</i>
+		<% } %>
+		</div>
+		<% if (page.page.pages > 1) { %>
+		<div class="page_buttons">
+			<% if (page.page.current != 1) { %>
+			<a href="?page=<%= page.page.current - 1 %>" class="pagebtn">Previous</a>
+			<% } %>
+			<% for (let i = 0; i < page.page.pages; i++) { let pnum = i + 1 %>
+			<a href="?page=<%= pnum %>" class="pagebtn<% if (pnum == page.page.current) { %> active<% } %>"><%= pnum %></a>
+			<% } %>
+			<% if (page.page.current != page.page.pages) { %>
+			<a href="?page=<%= page.page.current + 1 %>" class="pagebtn">Next</a>
+			<% } %>
+		</div>
+		<% } %>
+	</div>
+	<% include partials/footer.html %>
+</body>
+</html>

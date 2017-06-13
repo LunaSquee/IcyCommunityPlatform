@@ -1,0 +1,41 @@
+{
+  "name": "icycommunityplatform",
+  "version": "0.0.0-alpha",
+  "description": "Community Platform",
+  "main": "platform.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "forum",
+    "blogs",
+    "community"
+  ],
+  "author": "Evert",
+  "license": "MIT",
+  "dependencies": {
+    "babel-core": "^6.24.1",
+    "babel-plugin-syntax-async-functions": "^6.13.0",
+    "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.24.1",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.17.2",
+    "connect-redis": "^3.3.0",
+    "ejs": "^2.5.6",
+    "express": "^4.15.3",
+    "express-session": "^1.15.3",
+    "knex": "^0.13.0",
+    "mysql": "^2.13.0",
+    "objection": "^0.8.1",
+    "toml": "^2.3.2"
+  },
+  "devDependencies": {
+    "standard": "^10.0.2"
+  },
+  "standard": {
+    "env": {
+      "browser": true,
+      "node": true
+    }
+  }
+}

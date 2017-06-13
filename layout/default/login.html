@@ -1,0 +1,48 @@
+<% include partials/head.html %>
+<body>
+	<% include partials/page_top.html %>
+	<div class="wrapper">
+		<% if (locals.announcements) { %>
+		<div class="announcements">
+			<% for (let i in announcements) {
+				let ann = announcements[i]
+			%>
+			<div class="announcement <% if (i == 0) { %>visible<% } %>" data-part="<% i %>"><%= ann.html %></div>
+			<% } %>
+		</div>
+		<% } %>
+		<% if (locals.message && locals.message.text) { %>
+		<div class="message<% if (message.error) { %> error<% } %>"><%=message.text%></div>
+		<% } %>
+		<div class="login">
+			<h1>Log in</h1>
+			<form action="/login" method="POST">
+				<input type="hidden" name="csrf" id="csrf" value="<%= csrf %>">
+				<label for="username">Username or Email Address</label>
+				<input type="text" name="username" id="username">
+				<label for="password">Password</label>
+				<input type="password" name="password" id="password">
+				<input type="submit" name="submit" value="Log in">
+			</form>
+		</div>
+		<div class="register">
+			<h1>New account</h1>
+			<form action="/register" method="POST">
+				<input type="hidden" name="csrf" id="csrf" value="<%= csrf %>">
+				<label for="username">Username</label>
+				<input type="text" name="username" id="username" value="<%= formkeep.username %>">
+				<label for="display_name">Display Name</label>
+				<input type="text" name="display_name" id="display_name" value="<%= formkeep.display_name %>">
+				<label for="password">Password</label>
+				<input type="password" name="password" id="password" value="<%= formkeep.password %>">
+				<label for="password_repeat">Repeat Password</label>
+				<input type="password" name="password_repeat" id="password_repeat">
+				<label for="email">Email Address</label>
+				<input type="email" name="email" id="email" value="<%= formkeep.email %>">
+				<input type="submit" name="submit" value="Register">
+			</form>
+		</div>
+	</div>
+	<% include partials/footer.html %>
+</body>
+</html>
