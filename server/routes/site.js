@@ -280,13 +280,25 @@ router.get('/forum/viewtopic/:id-*?', wrapper(async (req, res) => {
     return res.redirect('/forum')
   }
 
-  if (req.query.findPost != null && !isNaN(parseInt(req.query.findPost))) {
-    let pageOf = await forum.getPostPage(parseInt(req.query.findPost))
-    if (pageOf != null) {
-      return res.redirect('?page=' + pageOf + '#post-' + req.query.findPost)
+  let find = req.query.findPost
+
+  // If the query contains 'latest', go to the latest post
+  if (req.query.latest != null) {
+    let latestPost = await forum.getLatestPost(req.params.id)
+    if (latestPost) {
+      find = latestPost.id
     }
   }
 
+  // Go to the post specified in query
+  if (find != null && !isNaN(parseInt(find))) {
+    let pageOf = await forum.getPostPage(parseInt(find))
+    if (pageOf != null) {
+      return res.redirect('?page=' + pageOf + '#post-' + find)
+    }
+  }
+
+  // Get page
   let page = 1
   if (req.query.page) {
     page = parseInt(req.query.page)
@@ -295,12 +307,14 @@ router.get('/forum/viewtopic/:id-*?', wrapper(async (req, res) => {
     }
   }
 
+  // Get the topic
   let topic = await forum.getPostsInTopic(req.params.id, page, null, req.session.user, req.realIP)
   if (!topic.page) {
     req.flash('message', {error: true, text: topic.error})
     return res.redirect('/forum')
   }
 
+  // Return any content that a POST error saved
   let cdata = req.flash('contentdata')
   if (!cdata.length) {
     cdata = ''
