@@ -12,14 +12,29 @@
 		</div>
 		<% } %>
 		<div class="forums">
-		<h1>Forums</h1>
+		<% if (locals.user && locals.user.permission_list.indexOf('forum.create') != -1) { locals.canCreate = true %>
+		<script type="text/html" id="newForumForm">
+			<form method="POST" action="/api/forum/new" id="postforum">
+				<span id="ongoingmsg"></span><br>
+				<input type="hidden" name="csrf" id="csrf" value="<%= csrf %>">
+				<input type="text" name="title" id="title" placeholder="Title"><br>
+				<input type="text" name="description" id="description" placeholder="Description"><br>
+				<input type="submit" value="Create">
+			</form>
+		</script>
+		<% } %>
+		<h1>Forums <% if (locals.canCreate) { %><a href="#" onclick="newForum()" class="add"><i class="fa fa-plus-circle"></i></a><% } %></h1>
 		<% if (locals.forums) { %>
 		<% for (let i in forums) {
 			let forum = forums[i]
 		%>
 		<div class="forum" data-forum-id="<%= forum.id %>" id="forum-<%= forum.slug %>">
-			<h2 class="forum_title"><%= forum.title %></h2>
-				<div class="categories">
+			<h2 class="forum_title"><%= forum.title %>
+				<% if (locals.canCreate) { %>
+				&nbsp;<a href="#" onclick="newForum(<%= forum.id %>)" class="add"><i class="fa fa-plus-circle"></i></a>
+				<% } %>
+			</h2>
+			<div class="categories">
 				<% for (let i in forum.categories) {
 					let category = forum.categories[i]
 				%>
@@ -47,16 +62,16 @@
 					let latr = category.latest_reply
 					%>
 					<div class="minicard">
-					<img src="<%= latr.user.avatar_file %>" alt="avi" class="avatar">
-					<a href="/forum/viewtopic/<%= latr.topic_id %>--?findPost=<%= latr.id %>" class="topic_title"><%= latr.title %></a>
-					<a href="/user/<%= latr.user.profile_slug %>" class="topic_user"><%= latr.user.display_name %></a>
+						<img src="<%= latr.user.avatar_file %>" alt="avi" class="avatar">
+						<a href="/forum/viewtopic/<%= latr.topic_id %>--?findPost=<%= latr.id %>" class="topic_title"><%= latr.title %></a>
+						<a href="/user/<%= latr.user.profile_slug %>" class="topic_user"><%= latr.user.display_name %></a>
 					</div>
 					<% } else { %>
 					<i class="norecent">No posts here!</i>
 					<% } %>
 					</div>
-				<% } %>
 				</div>
+				<% } %>
 			</div>
 		</div>
 		<% } } %>

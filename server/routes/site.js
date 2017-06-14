@@ -46,10 +46,15 @@ router.use(wrapper(async (req, res, next) => {
       display_name: udatanew.display_name,
       avatar_file: udatanew.avatar_file,
       admin: udatanew.admin,
-      identifier: udatanew.identifier
+      profile: await user.getPublicProfile(udatanew),
+      permission_list: await user.globalPermissions(udatanew)
     }
 
     req.session.updatequeue = Date.now() + 3600 * 1000
+  }
+
+  if (req.session.user) {
+    await user.activity(req.url, req.session.user)
   }
 
   next()
@@ -118,7 +123,8 @@ router.post('/login', wrapper(async (req, res) => {
     display_name: userdata.display_name,
     avatar_file: userdata.avatar_file,
     admin: userdata.admin,
-    identifier: userdata.identifier
+    profile: await user.getPublicProfile(userdata),
+    permission_list: await user.globalPermissions(userdata)
   }
 
   req.session.updatequeue = Date.now() + 3600 * 1000 // 1 hour update interval
@@ -404,6 +410,31 @@ router.post('/forum/post/:id', wrapper(async (req, res) => {
   }
 
   res.jsonp(result)
+}))
+
+router.get('/user/:id-*?', wrapper(async (req, res) => {
+  let uid = parseInt(req.params.id)
+  if (isNaN(uid)) {
+    return res.render('user', req.renderVars)
+  }
+
+  let userData = await user.get(uid)
+  if (!userData) {
+    return res.render('user', req.renderVars)
+  }
+
+  let profile = await user.getPublicProfile(userData, true)
+
+  req.renderVars['profilepage'] = Object.assign(userData, profile)
+  res.render('user', req.renderVars)
+}))
+
+router.get('/user/', wrapper(async (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login')
+  }
+
+  res.redirect('/user/' + req.session.user.profile.profile_slug)
 }))
 
 router.get('/test', wrapper(async (req, res) => {

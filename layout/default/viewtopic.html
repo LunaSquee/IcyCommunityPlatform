@@ -12,12 +12,6 @@
 		</div>
 		<% } %>
 		<div class="forums">
-		<nav class="forum_nav">
-			<a class="spage" style="z-index: 3;" href="/forum">Forum Index</a>
-			<a class="spage" style="z-index: 2;" href="/forum/<%= page.category.id + '-' + page.category.slug %>"><%= page.category.title %></a>
-			<a class="spage" style="z-index: 1;" href="/forum/viewtopic/<%= page.topic.id + '-' + page.topic.slug %>"><%= page.topic.title %></a>
-			<a href="#composer" class="button" style="float: right;">Reply to topic</a>
-		</nav>
 		<% let canPostInHere = locals.user != null
 
 		if (canPostInHere && page.category.permission_list.indexOf('topic.create') === -1) {
@@ -28,8 +22,14 @@
 			canPostInHere = false 
 		}
 		%>
-		<% if (canPostInHere) { %>
-		<% } %>
+		<nav class="forum_nav">
+			<a class="spage" style="z-index: 3;" href="/forum">Forum Index</a>
+			<a class="spage" style="z-index: 2;" href="/forum/<%= page.category.id + '-' + page.category.slug %>"><%= page.category.title %></a>
+			<a class="spage" style="z-index: 1;" href="/forum/viewtopic/<%= page.topic.id + '-' + page.topic.slug %>"><%= page.topic.title %></a>
+			<% if (canPostInHere) { %>
+			<a href="#composer" class="button" style="float: right;">Reply to topic</a>
+			<% } %>
+		</nav>
 		<h1><span class="sectiontitle"><%= page.topic.title %></span></h1>
 		<% if (page.posts[0]) {
 		let puser = page.posts[0].user %>

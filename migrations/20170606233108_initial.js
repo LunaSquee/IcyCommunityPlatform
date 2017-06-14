@@ -23,6 +23,7 @@ exports.up = function (knex, Promise) {
 
       table.string('ip_address').notNullable()
 
+      table.dateTime('activity_at')
       table.timestamps()
     }),
     knex.schema.createTable('forums', (table) => {

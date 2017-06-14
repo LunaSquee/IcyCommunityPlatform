@@ -2,6 +2,50 @@ body {
     font-family: "Open Sans";
     margin: 0;
 }
+
+.top {
+    margin: 10px;
+    height: 140px;
+    position: relative;
+}
+.banner {
+    background: #6db3f2;
+    background: -moz-linear-gradient(top, #6db3f2 0%, #54a3ee 50%, #3690f0 51%, #1e69de 100%);
+    background: -webkit-linear-gradient(top, #6db3f2 0%,#54a3ee 50%,#3690f0 51%,#1e69de 100%);
+    background: linear-gradient(to bottom, #6db3f2 0%,#54a3ee 50%,#3690f0 51%,#1e69de 100%);
+    height: 100px;
+    padding: 20px;
+    font-size: 400%;
+    font-weight: bold;
+    color: #fff;
+}
+.topcard {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.45);
+    border-radius: 5px;
+}
+.topcard a {
+    color: #008600;
+    text-decoration: none;
+    font-weight: bold;
+}
+.divider {
+    opacity: 0;
+    margin: 0 5px;
+}
+
+.login, .register {
+    width: 48%;
+    display: inline-block;
+    vertical-align: top;
+}
+form label {
+    display: block;
+    width: 260px;
+}
 .wrapper {
     margin: 10px;
     padding: 10px;
@@ -86,7 +130,7 @@ body {
     text-decoration: none;
 }
 .post {
-    min-height: 240px;
+    min-height: 300px;
     padding-bottom: 5px;
     background-color: #fff;
     padding: 5px;
@@ -126,17 +170,6 @@ body {
     padding: 10px 0;
     text-overflow: ellipsis;
     overflow: hidden;
-}
-.post .usercard .imagewrapper {
-    width: 160px;
-    height: 160px;
-    position: relative;
-    margin: auto;
-    border: 1px solid #ddd;
-}
-.post .usercard .avatar {
-    width: 100%;
-    height: 100%;
 }
 .post .title {
     padding: 10px;
@@ -194,6 +227,7 @@ body {
 }
 form .button, form input[type=submit] {
     margin: 5px 0;
+    display: block;
 }
 input[type=text], input[type=email], input[type=password] {
     padding: 5px;
@@ -257,4 +291,85 @@ input[type=text], input[type=email], input[type=password] {
     border-left-color: #dedede;
     border-width: 21px;
     margin-top: -21px;
+}
+footer {
+    margin: 10px;
+    padding: 10px;
+    background-color: #fdfdfd;
+    border: 1px solid #ddd;
+}
+.udata {
+    margin-left: 180px;
+}
+.udata h2 {
+    margin: 0;
+}
+.udata .username {
+    font-size: 80%;
+    color: #8a8a8a;
+}
+.usercard.profile {
+    height: 160px;
+    padding: 10px;
+}
+.usercard .imagewrapper {
+    width: 160px;
+    height: 160px;
+    position: relative;
+    margin: auto;
+    border: 1px solid #ddd;
+}
+.usercard.profile .imagewrapper {
+    margin: 0;
+    float: left;
+}
+.usercard .avatar {
+    width: 100%;
+    height: 100%;
+}
+.sidebar.list {
+    width: 200px;
+    float: left;
+}
+.tabbutton {
+    height: 20px;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    border-right: 0;
+}
+.tabbutton:hover {
+    background-color: #f3f3f3;
+}
+.tabbutton.active {
+    background-color: #cecece;
+    box-shadow: inset 2px 2px 5px #b5b5b5;
+}
+.containers {
+    margin-left: 200px;
+    padding: 10px;
+    min-height: 550px;
+    border: 1px solid #ddd;
+}
+.online-status .status {
+    padding: 0 5px;
+    margin: 5px 0;
+    display: inline-block;
+    border-radius: 5px;
+    text-transform: uppercase;
+    font-weight: bold;
+    color: #fff;
+}
+.online-status .status.online {
+    background-color: #00ce27;
+    border: 1px solid #4CAF50;
+}
+.online-status .status.offline {
+    background-color: #bf0d00;
+    border: 1px solid #860900;
+}
+.add {
+    color: green;
+    opacity: 0.5;
 }

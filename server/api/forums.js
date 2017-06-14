@@ -35,6 +35,9 @@ class Post extends Model {
 }
 
 let topicReadCache = new Cache(1200000)
+let topicCache = new Cache(300000)
+let categoryCache = new Cache(300000)
+let postCache = new Cache(60000)
 
 function paginate (page, count, perPage) {
   let pageCount = Math.ceil(count / perPage)
@@ -50,6 +53,58 @@ const API = {
     Category: Category,
     Topic: Topic,
     Post: Post
+  },
+  Cached: {
+    getTopic: async (topic) => {
+      if (topic.id && topicCache.get('id' + topic.id)) {
+        return topicCache.get('id' + topic.id)
+      } else if (typeof topic === 'number' && topicCache.get('id' + topic)) {
+        return topicCache.get('id' + topic)
+      }
+
+      let res = await Topic.query().where('id', topic.id != null ? topic.id : topic)
+      if (!res.length) {
+        return null
+      }
+      res = res[0]
+      topicCache.store('id' + res.id, res)
+
+      return res
+    },
+    getCategory: async (category) => {
+      if (category.id && categoryCache.get('id' + category.id)) {
+        return categoryCache.get('id' + category.id)
+      } else if (typeof category === 'number' && categoryCache.get('id' + category)) {
+        return categoryCache.get('id' + category)
+      }
+
+      let res = await Category.query().where('id', category.id != null ? category.id : category)
+      if (!res.length) {
+        return null
+      }
+
+      res = res[0]
+      categoryCache.store('id' + res.id, res)
+
+      return res
+    },
+    getPost: async (post) => {
+      if (post.id && postCache.get('id' + post.id)) {
+        return postCache.get('id' + post.id)
+      } else if (typeof post === 'number' && postCache.get('id' + post)) {
+        return postCache.get('id' + post)
+      }
+
+      let res = await Post.query().where('id', post.id != null ? post.id : post)
+      if (!res.length) {
+        return null
+      }
+
+      res = res[0]
+      postCache.store('id' + res.id, res)
+
+      return res
+    }
   },
   getCategoriesInForum: async (forum, includeLatestPost, user) => {
     let cats = await Category.query().where('forum_id', forum.id).orderBy('priority')
@@ -84,11 +139,10 @@ const API = {
   },
   getPostsInTopic: async (topic, page, perPage, user, ip) => {
     if (!topic.id) {
-      let t = await Topic.query().where('id', topic)
-      if (!t.length) {
+      topic = await API.Cached.getTopic(topic)
+      if (!topic) {
         return {success: false, error: 'No such topic!'}
       }
-      topic = t[0]
     }
 
     if (topic.read_by === null) topic.read_by = ''
@@ -106,24 +160,26 @@ const API = {
     perPage = perPage || runtime.get('postsPerPage')
     let pageinfo = paginate(page, postCount, perPage)
 
-    // Check if this user already visited this page
-    let addRead = true
-    if (topicReadCache.get('read#' + topic.id + ':' + user ? user.id : ip)) {
-      addRead = false
-    }
-
-    if (addRead && page === pageinfo.pageCount) {
+    if (page === pageinfo.pageCount) {
       // Add user into the read by list
-      if (user && readByUsers.indexOf(user.id) === -1) {
+      if (user && readByUsers.indexOf(user.id.toString()) === -1) {
         readByUsers.push(user.id)
       }
 
-      // Add a cache entry so that we don't let unregistered users spam more views with refreshing
-      topicReadCache.store('read#' + topic.id + ':' + user ? user.id : ip, true)
+      // Check if this user already visited this page
+      if (!topicReadCache.get('read#' + topic.id + ':' + (user != null ? user.id : ip))) {
+        // Increment the views counter
+        topic.views++
+
+        // Add a cache entry so that we don't let unregistered users spam more views with refreshing
+        topicReadCache.store('read#' + topic.id + ':' + (user != null ? user.id : ip), true)
+      }
 
       // Update topic with new views and new readers
-      topic.views++
-      await Topic.query().patchAndFetchById(topic.id, {views: topic.views, read_by: readByUsers.length ? readByUsers.join('|') : ''})
+      await Topic.query().patchAndFetchById(topic.id, {
+        views: topic.views,
+        read_by: readByUsers.length ? readByUsers.join('|') : ''
+      })
     }
 
     // Query offset posts
@@ -131,6 +187,7 @@ const API = {
 
     let category = await Category.query().where('id', topic.category_id)
     category = category[0]
+
     let perms = await users.permssionsOnCategory(user, category)
     category.permission_list = perms
 
@@ -160,11 +217,10 @@ const API = {
   },
   getTopicsInCategory: async (category, page, perPage, user) => {
     if (!category.id) {
-      let t = await Category.query().where('id', category)
-      if (!t.length) {
+      category = await API.Cached.getCategory(category)
+      if (!category) {
         return {success: false, error: 'No such category!'}
       }
-      category = t[0]
     }
     // Get the amount of topics in this category
     let topicCount = await Topic.query().count('id as counts').where('category_id', category.id)
@@ -229,6 +285,7 @@ const API = {
 
     let page = Math.floor(indexOfPost / perPage) + 1
     if (page === 0) page = 1
+
     return page
   },
   getLatestPost: async (topic) => {
@@ -278,11 +335,10 @@ const API = {
   },
   createTopic: async (category, title, content, ip, user) => {
     if (!category.id) {
-      let t = await Category.query().where('id', category)
-      if (!t.length) {
+      category = await API.Cached.getCategory(category)
+      if (!category) {
         return {success: false, error: 'No such category!'}
       }
-      category = t[0]
     }
 
     if (!await API.permissionInCategory(user, category, 'topic.create')) {
@@ -341,13 +397,117 @@ const API = {
 
     return post
   },
+  getPostsByUser: async(uid, page, perPage) => {
+    let user = await users.ensureUserIsObject(uid)
+
+    if (!user) {
+      return null
+    }
+
+    // Get the amount of posts in order to do pagination
+    let postCount = await Post.query().count('id as counts').where('user_id', user.id)
+    if (postCount.length) {
+      postCount = postCount[0].counts
+    } else {
+      postCount = 0
+    }
+
+    // Calculate offset
+    perPage = perPage || runtime.get('postsPerPage')
+    let pageinfo = paginate(page, postCount, perPage)
+
+    // Query offset posts
+    let posts = await Post.query().where('user_id', user.id).offset(pageinfo.offset).limit(perPage)
+
+    // Add user info and render posts
+    for (let i in posts) {
+      let guser = await users.getPublicProfile(posts[i].user_id)
+      let post = posts[i]
+      post.user = guser
+      post.blocked = post.blocked === 1
+
+      if (post.blocked) {
+        post.content = 'Content removed by a moderator'
+      } else {
+        post.content = render(post.content)
+      }
+
+      let topic = await API.Cached.getTopic(post.topic_id)
+      post.topic = topic
+      delete post.topic.listeners
+      delete post.topic.read_by
+
+      let category = await API.Cached.getCategory(post.topic.category_id)
+      post.category = category
+      delete post.category.permission_list
+    }
+
+    return {
+      page: {
+        current: page,
+        perPage: perPage,
+        pages: pageinfo.pageCount
+      },
+      posts: posts
+    }
+  },
+  getTopicsByUser: async(uid, page, perPage) => {
+    let user = await users.ensureUserIsObject(uid)
+
+    if (!user) {
+      return null
+    }
+
+    // Get the amount of posts in order to do pagination
+    let topicCount = await Topic.query().count('id as counts').where('user_id', user.id)
+    if (topicCount.length) {
+      topicCount = topicCount[0].counts
+    } else {
+      topicCount = 0
+    }
+
+    // Calculate offset
+    perPage = perPage || runtime.get('topicsPerPage')
+    let pageinfo = paginate(page, topicCount, perPage)
+
+    // Query offset posts
+    let topics = await Topic.query().where('user_id', user.id).offset(pageinfo.offset).limit(perPage)
+
+    // Add user info and render posts
+    for (let i in topics) {
+      let guser = await users.getPublicProfile(topics[i].user_id)
+      let topic = topics[i]
+      topic.user = guser
+      topic.blocked = topic.blocked === 1
+
+      let category = await Category.query().where('id', topic.category_id)
+      topic.category = category[0]
+      delete topic.category.permission_list
+      delete topic.listeners
+      delete topic.read_by
+
+      let post = await Post.query().where('topic_id', topic.id).orderBy('created_at', 'desc').limit(1)
+      if (post.length) {
+        topic.post = post[0]
+        delete topic.post.ip_address
+      }
+    }
+
+    return {
+      page: {
+        current: page,
+        perPage: perPage,
+        pages: pageinfo.pageCount
+      },
+      topics: topics
+    }
+  },
   addReply: async (topic, content, ip, user) => {
     if (!topic.id) {
-      let t = await Topic.query().where('id', topic)
-      if (!t.length) {
+      topic = await API.Cached.getTopic(topic)
+      if (!topic) {
         return {success: false, error: 'No such topic!'}
       }
-      topic = t[0]
     }
 
     if (!await API.permissionInCategory(user, topic.category_id, 'topic.reply')) {
@@ -391,23 +551,19 @@ const API = {
   },
   editReply: async (post, content, ip, user) => {
     if (!post.id) {
-      let t = await Post.query().where('id', post)
-      if (!t.length) {
+      post = await API.Cached.getPost(post)
+      if (!post) {
         return {success: false, error: 'No such reply!'}
       }
-      post = t[0]
     }
 
-    let topic = await Topic.query().where('id', post.topic_id)
+    let topic = await API.Cached.getTopic(post.topic_id)
 
-    if (!topic.length) {
+    if (!topic) {
       return {success: false, error: 'The topic has disappeared!\nIf you believe this is an error, please contact an administrator!'}
     }
 
-    topic = topic[0]
-
-    let category = await Category.query().where('id', topic.category_id)
-    category = category[0]
+    let category = await API.Cached.getCategory(topic.category_id)
 
     if (topic.locked === 1 && !await API.permissionInCategory(user, category, 'forum.post.locked')) {
       return {success: false, error: 'This topic is locked!'}
@@ -440,11 +596,11 @@ const API = {
     } else {
       latest = latest[0].priority
     }
-/*
+
     if (!await users.hasPermission(user, 'forum.create')) {
       return {success: false, error: 'You do not have permission to create forums!'}
     }
-*/
+
     let construct = {
       title: title,
       slug: slugify(title),
@@ -465,11 +621,11 @@ const API = {
       }
       forum = t[0]
     }
-/*
+
     if (!await users.hasPermission(user, 'forum.create')) {
       return {success: false, error: 'You do not have permission to create categories!'}
     }
-*/
+
     let latest = await Category.query().orderBy('priority', 'desc').limit(1).where('forum_id', forum.id)
     if (!latest.length) {
       latest = 0

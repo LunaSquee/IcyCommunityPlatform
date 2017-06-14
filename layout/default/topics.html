@@ -15,10 +15,10 @@
 		<nav class="forum_nav">
 			<a class="spage" style="z-index: 2;" href="/forum">Forum Index</a>
 			<a class="spage" style="z-index: 1;" href="/forum/<%= page.category.id + '-' + page.category.slug %>"><%= page.category.title %></a>
+			<% if (locals.user && page.category.permission_list.indexOf('topic.create') != -1) { %>
 			<a class="button" href="#" onclick="editor()">New Topic</a>
+			<% } %>
 		</nav>
-		<% if (locals.user && page.category.permission_list.indexOf('topic.create') != -1) { %>
-		<% } %>
 		<h1>Topics in <span class="sectiontitle"><%= page.category.title %></span></h1>
 		<span class="category_desc"><%= page.category.description %></span>
 		<p></p>

@@ -1,0 +1,61 @@
+<% include partials/head.html %>
+<body>
+	<% include partials/page_top.html %>
+	<div class="wrapper">
+		<% if (locals.announcements) { %>
+		<div class="announcements">
+			<% for (let i in announcements) {
+				let ann = announcements[i]
+			%>
+			<div class="announcement <% if (i == 0) { %>visible<% } %>" data-part="<% i %>"><%= ann.html %></div>
+			<% } %>
+		</div>
+		<% } %>
+		<div class="users">
+			<% if (!locals.profilepage) { %>
+			<div class="message error">No such user.</div>
+			<% } else { %>
+			<div class="user_page" data-user-id="<%= profilepage.id %>">
+				<div class="topbar">
+					<div class="usercard profile">
+						<div class="imagewrapper">
+							<img class="avatar" src="<%= profilepage.avatar_file %>" alt="Avatar">
+						</div>
+						<div class="udata">
+							<h2><%= profilepage.display_name %></h2>
+							<div class="username">@<%= profilepage.username %></div>
+							<div class="timestamp">User created: <%= new Date(profilepage.created_at) %></div>
+							<span class="online-status" title="Last active: <%= timeSince(new Date(profilepage.updated_at)) %> ago">
+							<% if (profilepage.online) { %>
+							<div class="status online">Online</div>
+							<% } else { %>
+							<div class="status online">Offline</div>
+							<% } %>
+							</span>
+						</div>
+					</div>
+				</div>
+				<div class="content">
+					<div class="sidebar list">
+						<div class="tabbutton active" data-tab="about">About</div>
+						<div class="tabbutton" data-tab="posts">Posts</div>
+						<div class="tabbutton" data-tab="topics">Topics</div>
+						<div class="tabbutton" data-tab="blogs">Blogs</div>
+					</div>
+					<div class="containers">
+						<div class="container" id="tab-about">
+							<% if (profilepage.about_me) { %>
+							<%- profilepage.about_me %>
+							<% } else { %>
+							<p><i>This user hasn't said anything about themselves.</i></p>
+							<% } %>
+						</div>
+					</div>
+				</div>
+			</div>
+			<% } %>
+		</div>
+	</div>
+	<% include partials/footer.html %>
+</body>
+</html>

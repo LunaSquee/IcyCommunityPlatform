@@ -4,6 +4,7 @@ import path from 'path'
 import db from '../../utility/database'
 import config from '../../utility/config'
 import slugify from '../../utility/slug'
+import render from '../../utility/contentfilter'
 
 import runtime from '../runtime'
 
@@ -13,6 +14,7 @@ import Cache from './memcache'
 const Model = db.Model
 
 let groupMembershipCache = new Cache(1800000)
+let subsequentUserDataRequests = new Cache(300000)
 
 class User extends Model {
   static get tableName () {
@@ -133,8 +135,14 @@ const API = {
       return bcryptTask({task: 'compare', password: password, hash: hash})
     }
   },
-  get: async function (identifier) {
+  get: async function (identifier, skipCaches) {
     let userObj = null
+
+    if (identifier.id && !skipCaches && subsequentUserDataRequests.get('userid' + identifier.id)) {
+      return subsequentUserDataRequests.get('userid' + identifier.id)
+    } else if (typeof identifier === 'number' && !skipCaches && subsequentUserDataRequests.get('userid' + identifier)) {
+      return subsequentUserDataRequests.get('userid' + identifier)
+    }
 
     if (typeof identifier === 'object' && identifier.id != null && identifier.user_id == null) {
       userObj = await User.query().where('id', identifier.id)
@@ -164,6 +172,8 @@ const API = {
       userObj.avatar_file = '/static/image/profile.png'
     }
 
+    subsequentUserDataRequests.store('userid' + userObj.id, userObj)
+
     return userObj
   },
   ensureUserIsObject: async function (user) {
@@ -181,6 +191,35 @@ const API = {
 
     return data
   },
+  getBanStatus: async function (user, ip) {
+    user = await API.ensureUserIsObject(user)
+
+    // Check 1: check banned user id
+    let bans = await Ban.query().where('banned_id', user.id)
+    if (bans.length) {
+      for (let i in bans) {
+        let ban = bans[i]
+        if (new Date(ban.expires_at).getTime() > new Date().getTime()) {
+          return {banned: true, reason: ban.reason}
+        }
+      }
+    }
+
+    if (ip) {
+      // Check 2: check banned user ip
+      bans = await Ban.query().where('ip_address', ip)
+      if (bans.length) {
+        for (let i in bans) {
+          let ban = bans[i]
+          if (new Date(ban.expires_at).getTime() > new Date().getTime()) {
+            return {banned: true, reason: ban.reason}
+          }
+        }
+      }
+    }
+
+    return {banned: false}
+  },
   shouldLoginPermit: async function (req) {
     let user = await API.get(req.username || req.email)
 
@@ -194,29 +233,10 @@ const API = {
 
     // TODO: TOTP tokens
 
-    // Check 1: check banned user id
-    let bans = await Ban.query().where('banned_id', user.id)
-    if (bans.length) {
-      for (let i in bans) {
-        let ban = bans[i]
-        if (new Date(ban.expires_at).getTime() > new Date().getTime()) {
-          return {should: false, reason: 'You are banned!\rReason: ' + ban.reason}
-        }
-      }
+    let banned = await API.getBanStatus(user, req.ip)
+    if (banned.banned) {
+      return {should: false, reason: 'You are banned!\nReason: ' + banned.reason}
     }
-
-    // Check 2: check banned user ip
-    bans = await Ban.query().where('ip_address', req.ip)
-    if (bans.length) {
-      for (let i in bans) {
-        let ban = bans[i]
-        if (new Date(ban.expires_at).getTime() > new Date().getTime()) {
-          return {should: false, reason: 'You are banned!\rReason: ' + ban.reason}
-        }
-      }
-    }
-
-    user.identifier = user.id + '-' + slugify(user.display_name)
 
     return {should: true, user: user}
   },
@@ -338,11 +358,22 @@ const API = {
       signature: user.signature,
       admin: user.admin,
       user_title: utitle,
+      last_active: user.updated_at, // TODO: change once database reset
+      online: new Date(user.updated_at).getTime() > Date.now() - 300000, // 5 minutes
       profile_slug: user.id + '-' + slugify(user.display_name)
+    }
+
+    if (minimal.signature) {
+      minimal.signature = render(minimal.signature)
     }
 
     if (profilePage) {
       minimal['profile'] = JSON.parse(user.profile)
+      if (minimal.profile && minimal.profile.content) {
+        minimal.content = render(minimal.profile.content)
+      } else {
+        minimal.content = null
+      }
       /*
       let topics = await forums.Model.Post.query().where('user_id', user.id)
       let posts = await forums.Model.Post.query().where('user_id', user.id)
@@ -357,6 +388,13 @@ const API = {
     }
 
     return minimal
+  },
+  activity: async function (page, user) {
+    user = await API.ensureUserIsObject(user)
+
+    let now = new Date()
+
+    await User.query().patchAndFetchById(user.id, {updated_at: now})
   },
   getGroup: async function (identifier) {
     let group = null
@@ -423,7 +461,7 @@ const API = {
     return membership
   },
   globalPermissions: async function (user) {
-    user = await API.get(user)
+    user = await API.ensureUserIsObject(user)
     if (user.admin) {
       return adminPerms
     }

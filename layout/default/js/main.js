@@ -92,4 +92,43 @@ $(document).ready(function () {
 
     return false
   }
+
+  window.newForum = function (id) {
+    window.dialog.popScript('New ' + id ? 'Category' : 'Forum', 'newForumForm')
+
+    function message (msg) {
+      $('#dialog #ongoingmsg').text(msg)
+    }
+
+    $('#dialog #postforum').submit((e) => {
+      e.preventDefault()
+
+      let content = {
+        csrf: $('#postforum #csrf').val(),
+        title: $('#postforum #title').val(),
+        description: $('#postforum #description').val()
+      }
+
+      let url = '/api/' + (id ? 'category' : 'forum') + '/create' + (id ? '/' + id : '')
+
+      fireRequest(url, 'POST', JSON.stringify(content), true).then((res) => {
+        let data
+        try {
+          data = JSON.parse(res)
+        } catch (e) {
+          console.error(e)
+          return
+        }
+
+        if (data.error) {
+          return message(data.error)
+        }
+
+        window.location.reload()
+      }, (e) => {
+        console.error(e)
+        message('unexpected server error')
+      })
+    })
+  }
 })
