@@ -1,5 +1,7 @@
 var options = { classPrefix: 'bbcode', newLine: false, allowData: false, allowClasses: false }
 
+var regex = /\[(\w+)(?:[= ]([^\]]+))?\]((?:.|[\r\n])*?)\[\/\1\]/ig
+
 const parseAttributes = (tag, attrs) => {
   let obj = {attr: {}, class: [], data: {}}
   if (!attrs) return obj
@@ -28,7 +30,7 @@ const parseDataAttrs = (dataList) => {
 }
 
 const parseTag = (string, tag, attrs, value) => {
-  value = String(value)
+  value = String(value).replace(regex, parseTag.bind())
   tag = tag.toLowerCase()
   let val = ''
   let parseAttr = parseAttributes(tag, /\[(.*?)\]/g.exec(string)[1])
@@ -136,5 +138,5 @@ module.exports = (content, newOptions = {}) => {
 
   newOptions = Object.assign(options, newOptions)
   if (newOptions.newLine) content = content.replace(/\r?\n/g, '<br>')
-  return content.replace(/\[(\w+)(?:[= ]([^\]]+))?]((?:.|[\r\n])*?)\[\/\1]/ig, parseTag.bind())
+  return content.replace(regex, parseTag.bind())
 }

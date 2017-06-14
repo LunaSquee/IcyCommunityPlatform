@@ -94,7 +94,7 @@ $(document).ready(function () {
   }
 
   window.newForum = function (id) {
-    window.dialog.popScript('New ' + id ? 'Category' : 'Forum', 'newForumForm')
+    window.dialog.popScript('New ' + (id ? 'Category' : 'Forum'), 'newForumForm')
 
     function message (msg) {
       $('#dialog #ongoingmsg').text(msg)
